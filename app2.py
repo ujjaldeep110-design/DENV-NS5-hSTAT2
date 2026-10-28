@@ -11,7 +11,6 @@ st.markdown("Interactive filtering of molecular docking and ADMETlab3 toxicity p
 # --- 2. LOAD & CLEAN DATA ---
 @st.cache_data
 def load_data():
-    # Updated to match your uploaded CSV filename
     file_path = "Comprehensive_ADMET_Ranked_871.csv" 
     
     if os.path.exists(file_path):
@@ -32,7 +31,7 @@ if not df.empty:
     # --- 3. SIDEBAR FILTERS ---
     st.sidebar.header("⚙️ Filter Criteria")
     
-    # Compound Search (Fulfills final deliverable requirement)
+    # Compound Search
     search_query = st.sidebar.text_input("🔍 Search Compound Name", "")
     
     # Binding Affinity Filters
@@ -47,15 +46,19 @@ if not df.empty:
     max_dili = st.sidebar.slider("Max DILI (Liver Tox)", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     max_herg = st.sidebar.slider("Max hERG (Heart Tox)", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     max_ototox = st.sidebar.slider("Max Ototoxicity (Ear)", min_value=0.0, max_value=1.0, value=0.8, step=0.05)
-    
-    # Secondary Organ Toxicities
     max_neurotox = st.sidebar.slider("Max Neurotoxicity (Brain)", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     max_nephrotox = st.sidebar.slider("Max Nephrotoxicity (Kidney)", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     max_hematotox = st.sidebar.slider("Max Hematotoxicity (Blood)", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     
-    # Cancer Risk
+    # NEW: Respiratory Toxicity Filter
+    max_resp = st.sidebar.slider("Max Respiratory Toxicity", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
+    
+    # Cancer Risk & DNA Damage
     st.sidebar.markdown("### Systemic Risks")
     max_carc = st.sidebar.slider("Max Carcinogenicity", min_value=0.0, max_value=1.0, value=0.6, step=0.05)
+    
+    # NEW: Genotoxicity Filter
+    max_geno = st.sidebar.slider("Max Genotoxicity", min_value=0.0, max_value=1.0, value=0.5, step=0.05)
     
     # PAINS Filter
     exclude_pains = st.sidebar.checkbox("Exclude PAINS (Assay Interference)", value=True)
@@ -91,7 +94,9 @@ if not df.empty:
     filtered_df = safe_filter(filtered_df, 'Neurotoxicity-DI', '<=', max_neurotox)
     filtered_df = safe_filter(filtered_df, 'Nephrotoxicity-DI', '<=', max_nephrotox)
     filtered_df = safe_filter(filtered_df, 'Hematotoxicity', '<=', max_hematotox)
+    filtered_df = safe_filter(filtered_df, 'Respiratory', '<=', max_resp)
     filtered_df = safe_filter(filtered_df, 'Carcinogenicity', '<=', max_carc)
+    filtered_df = safe_filter(filtered_df, 'Genotoxicity', '<=', max_geno)
 
     # --- 5. MAIN DASHBOARD VISUALIZATIONS ---
     col1, col2 = st.columns(2)
@@ -105,7 +110,7 @@ if not df.empty:
     st.subheader("📊 Chemical Space: Binding Affinity vs. Toxicity")
     if not filtered_df.empty and 'Vina Score NS5' in filtered_df.columns and 'DILI' in filtered_df.columns:
         hover_data = [name_col, 'SMILES']
-        for col in ['total score', 'comp score', 'QED', 'Ototoxicity', 'Neurotoxicity-DI']:
+        for col in ['total score', 'comp score', 'QED', 'Ototoxicity', 'Neurotoxicity-DI', 'Respiratory', 'Genotoxicity']:
             if col in filtered_df.columns:
                 hover_data.append(col)
                 
@@ -118,10 +123,8 @@ if not df.empty:
             color_continuous_scale='Viridis',
             title="Dengue NS5 Affinity vs. Liver Toxicity (Hover for details)"
         )
-        # Reverses the X-axis so stronger (more negative) binding is on the right
         fig.update_xaxes(autorange="reversed")
         
-        # Uses width='stretch' to clear the deprecation warning
         st.plotly_chart(fig, width='stretch')
     else:
         st.warning("No compounds match the current filter criteria or required columns are missing.")
